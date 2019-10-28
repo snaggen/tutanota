@@ -63,7 +63,7 @@ export const _TypeModel: TypeModel = {
 		}
 	},
 	"app": "tutanota",
-	"version": "36"
+	"version": "37"
 }
 
 export function createInternalGroupData(values?: $Shape<$Exact<InternalGroupData>>): InternalGroupData {

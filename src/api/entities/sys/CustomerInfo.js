@@ -124,7 +124,7 @@ export const _TypeModel: TypeModel = {
 			"final": true,
 			"encrypted": false
 		},
-		"source": {"name": "source", "id": 725, "since": 9, "type": "Number", "cardinality": "One", "final": false, "encrypted": false},
+		"source": {"name": "source", "id": 725, "since": 9, "type": "String", "cardinality": "One", "final": false, "encrypted": false},
 		"testEndTime": {
 			"name": "testEndTime",
 			"id": 156,

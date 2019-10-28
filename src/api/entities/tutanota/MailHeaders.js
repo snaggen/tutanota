@@ -70,7 +70,7 @@ export const _TypeModel: TypeModel = {
 	},
 	"associations": {},
 	"app": "tutanota",
-	"version": "36"
+	"version": "37"
 }
 
 export function createMailHeaders(values?: $Shape<$Exact<MailHeaders>>): MailHeaders {
