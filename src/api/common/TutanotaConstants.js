@@ -436,3 +436,16 @@ export function getWeekStart(userSettings: UserSettingsGroupRoot): WeekStartEnum
 export type WeekStartEnum = $Values<typeof WeekStart>
 
 export const SECOND_MS = 1000
+
+export const PostingType = Object.freeze({
+	Generic: "0",
+	UsageFee: "1",
+	Credit: "2",
+	Dispute: "3",
+	Suspension: "4",
+	Payment: "5",
+	Refund: "6",
+	SuspensionCancel: "7"
+})
+export type PostingTypeEnum = $Values<typeof PostingType>
+

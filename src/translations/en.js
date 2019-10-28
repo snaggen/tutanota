@@ -1016,6 +1016,13 @@ module.exports = {
 		"yourCalendars_label": "Your calendars",
 		"yourFolders_action": "YOUR FOLDERS",
 		"yourMessage_label": "Your message",
-		"about_label": "About"
+		"about_label": "About",
+		"currentBalance_label": "Current Balance",
+		"postings_label": "Postings",
+		"invoice_label": "Invoice",
+		"credit_label": "Credit",
+		"refund_label": "Refund",
+		"amount_label": "Amount",
+		"balance_label": "Balance"
 	}
 }

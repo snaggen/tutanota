@@ -1020,6 +1020,9 @@ module.exports = {
 		"yourCalendars_label": "Deine Kalender",
 		"yourFolders_action": "DEINE ORDNER",
 		"yourMessage_label": "Deine Nachricht",
-		"about_label": "Über"
+		"about_label": "Über",
+		"currentBalance_label": "Aktueller Kontostand",
+		"postings_label": "Buchungen"
+
 	}
 }
