@@ -6,7 +6,7 @@ const env = require('./buildSrc/env.js')
 const LaunchHtml = require('./buildSrc/LaunchHtml.js')
 const SystemConfig = require('./buildSrc/SystemConfig.js')
 const os = require("os")
-const commonjs = require("rollup-plugin-commonjs")
+
 const {spawn} = require("child_process")
 const RollupConfig = require("./buildSrc/RollupConfig")
 
@@ -21,16 +21,7 @@ try {
 // const desktopBuilder = require("./buildSrc/DesktopBuilder")
 
 const rollup = require("rollup")
-const babel = require("rollup-plugin-babel")
 
-function resolveLibs() {
-	return {
-		name: "resolve-libs",
-		resolveId(source) {
-			return SystemConfig.dependencyMap[source]
-		}
-	}
-}
 
 async function createHtml(env, watch) {
 	let filenamePrefix
@@ -100,24 +91,11 @@ async function build({watch, desktop}) {
 
 	const inputOptions = {
 		input: ["src/app.js", "src/api/worker/WorkerImpl.js"],
-		plugins: [
-			babel({
-				plugins: [
-					// Using Flow plugin and not preset to run before class-properties and avoid generating strange property code
-					"@babel/plugin-transform-flow-strip-types",
-					"@babel/plugin-proposal-class-properties",
-					"@babel/plugin-syntax-dynamic-import"
-				]
-			}),
-			resolveLibs(),
-			commonjs({
-				exclude: "src/**",
-			}),
-		],
+		plugins: RollupConfig.rollupDebugPlugins(),
 		treeshake: false, // disable tree-shaking for faster development builds
 		preserveModules: true,
 	}
-	const outputOptions = Object.assign({}, RollupConfig.output, {sourcemap: "inline", dir: "build"})
+	const outputOptions = Object.assign({}, RollupConfig.outConfig, {sourcemap: "inline", dir: "build"})
 
 	if (watch) {
 		const WebSocket = require("ws")

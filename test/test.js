@@ -1,21 +1,15 @@
 const Promise = require('bluebird')
-const chalk = require('chalk')
 const path = require("path")
-const Builder = require('../buildSrc/Builder.js').Builder
-const babelCompile = require('../buildSrc/Builder.js').babelCompile
 const destDir = path.join(__dirname, "../build/")
 const fs = Promise.Promise.promisifyAll(require("fs-extra"))
 const child_process = require('child_process')
 const env = require('../buildSrc/env.js')
 const LaunchHtml = require('../buildSrc/LaunchHtml.js')
 const SystemConfig = require('../buildSrc/SystemConfig.js')
+const rollup = require("rollup")
 
-const builder = new Builder(path.join(__dirname, '../'), destDir)
+const {outConfig, rollupDebugPlugins} = require("../buildSrc/RollupConfig")
 
-let promise = Promise.resolve()
-if (process.argv.indexOf("clean") !== -1) {
-	promise = builder.clean()
-}
 
 var project = null
 if (process.argv.indexOf("api") !== -1) {
@@ -27,36 +21,44 @@ if (process.argv.indexOf("api") !== -1) {
 	process.exit(1)
 }
 
-
-let watch = process.argv.indexOf("watch") === -1 ? undefined : () => runTest()
-
-promise.then(() => fs.copyAsync(path.join(__dirname, '../libs'), path.join(__dirname, '../build/libs')))
-       .then(() => fs.readFileAsync('../src/api/worker/WorkerBootstrap.js', 'utf-8').then(bootstrap => {
-	       let lines = bootstrap.split("\n")
-	       lines[0] = lines[0].replace(/..\/..\/..\/..\/build\/libs/g, "../../../../libs")
-	       let code = babelCompile(lines.join("\n")).code
-	       return fs.writeFileAsync('../build/src/api/worker/WorkerBootstrap.js', code, 'utf-8')
-       }))
-       .then(() => builder.build(["buildSrc/env.js", "src", "test/client", "test/api"], watch))
-       .then(createUnitTestHtml)
-       .then(runTest)
-       .then((code) => {
-	       if (process.argv.indexOf("watch") !== -1) {
-		       require('chokidar-socket-emitter')({port: 9082, path: '../build', relativeTo: '../build'})
-	       } else {
-		       // If it's not watch, exit with the same exit code as test process so we can tell if tests failed
-		       process.exit(code)
-	       }
-       })
-       .catch(Error, e => {
-	       if (e.message.startsWith('ENOENT')) {
-		       console.log(`${chalk.red(e.message)}`)
-		       console.log(`${chalk.green.bold("> Did you call make?")}`)
-		       process.exit(1)
-	       }
-       })
-
 let testRunner = null
+
+function resolveTestLibsPlugin() {
+	const testLibs = {
+		ospec: "../node_modules/ospec/ospec.js"
+	}
+
+	return {
+		name: "resolve-test-libs",
+		resolveId(source) {
+			return testLibs[source]
+		}
+	}
+}
+
+async function build() {
+	const bundle = await rollup.rollup({
+		input: ["client/Suite.js"],
+		plugins: rollupDebugPlugins("..").concat(resolveTestLibsPlugin()),
+		treeshake: false,
+		preserveModules: true,
+	})
+	return bundle.write(Object.assign({}, outConfig, {sourcemap: "inline", dir: "../build/test/client"}))
+}
+
+(async function () {
+	try {
+		await build()
+		await createUnitTestHtml()
+		// const statusCode = await runTest()
+		// process.exit(statusCode)
+		process.exit(0)
+	} catch (e) {
+		console.error(e)
+		process.exit(1)
+	}
+})()
+
 
 function runTest() {
 	if (testRunner != null) {
@@ -72,17 +74,22 @@ function runTest() {
 	}
 }
 
-function createUnitTestHtml() {
+async function createUnitTestHtml(watch) {
 	let localEnv = env.create(SystemConfig.devTestConfig(), null, "unit-test", "Test")
-	return Promise.all([
-		_writeFile(`../build/test-${project}.js`, [
-			`window.env = ${JSON.stringify(localEnv, null, 2)}`,
-			`System.config(env.systemConfig)`,
-			`System.import("src/system-resolve.js").then(function() { System.import('test/${project}/bootstrapBrowser.js') })`,
-		].join("\n")),
-		LaunchHtml.renderTestHtml(SystemConfig.baseDevDependencies.concat([`test-${project}.js`]))
-		          .then((html) => _writeFile(`../build/test-${project}.html`, html))
-	])
+	let imports = SystemConfig.baseDevDependencies.concat([`test/client/bootstrapBrowser.js`])
+
+	const template = "System.import('./test/client/bootstrapBrowser.js')"
+	await _writeFile(`../build/test-${project}.js`, [
+		`window.whitelabelCustomizations = null`,
+		`window.env = ${JSON.stringify(localEnv, null, 2)}`,
+		watch ? "new WebSocket('ws://localhost:8080').addEventListener('message', (e) => window.hotReload())" : "",
+	].join("\n") + "\n" + template)
+	console.log(template)
+
+	const html = await LaunchHtml.renderHtml(imports, localEnv)
+	await _writeFile(`../build/test-${project}.html`, html)
+
+	fs.copyFileSync("client/bootstrapBrowser.js", "../build/test/client/bootstrapBrowser.js")
 }
 
 function _writeFile(targetFile, content) {
